@@ -86,6 +86,7 @@ object Admin1Population extends CommandApp(
         val fs = FileSystem.get(new URI(output), conf)
         val geojson = new PrintWriter(fs.create(new Path(output + ".geojson")))
         val csv = new PrintWriter(fs.create(new Path(output + ".csv")))
+        csv.println("adm1_code,adm0_a3,population,area_km")
         try {
           for ((adm, pop) <- result) {
             val f = features(adm.adm1_code)
