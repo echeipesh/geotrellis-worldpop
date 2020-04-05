@@ -1,16 +1,18 @@
 package geotrellis.worldpop
 
-import geotrellis.raster.{GridExtent, RasterSource}
+import geotrellis.layer._
+import geotrellis.raster._
 import geotrellis.raster.geotiff.GeoTiffRasterSource
+import geotrellis.raster.resample.NearestNeighbor
+import geotrellis.spark.partition.SpatialPartitioner
+import geotrellis.spark._
 import geotrellis.vector.Extent
+import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.SparkSession
+import org.apache.spark.{HashPartitioner, Partitioner, SparkContext}
 
 import scala.collection.concurrent.TrieMap
-
-class WorldPop {
-
-}
-
-
+import scala.reflect.ClassTag
 
 object WorldPop {
   // ensure we have only one RasterSouce per country per JVM to avoid re-reading metadata
@@ -20,26 +22,48 @@ object WorldPop {
     def getSource(cc: String) = rasterSourceCache.getOrElseUpdate(cc, {
       val base = "s3://azavea-worldpop/Population/Global_2000_2020/2020"
       val url = s"${base}/$cc/${cc.toLowerCase}_ppp_2020.tif" // not UN adj.
-      val source = GeoTiffRasterSource(url)
-
-      // Resample to custom extents for countries that cross the anti-meridian
-      // This will break if any further downstream resample/reproject operations
-      // are performed due to how RasterSource builds chains of these operations.
-      if (cc == "RUS") {
-        val extent = Extent(23.0, 41.1887500, 179.70, 81.8579165)
-        source.resampleToRegion(source.gridExtent.createAlignedGridExtent(extent))
-      } else if (cc == "FJI") {
-        val extent = Extent(176.73, -19.29, 179.70, -15.94)
-        source.resampleToRegion(source.gridExtent.createAlignedGridExtent(extent))
-      } else {
-        source
-      }
+      GeoTiffRasterSource(url)
     })
 
     val cleanCode = code.toUpperCase()
     if (WorldPop.codes.contains(cleanCode)) {
       Some(getSource(cleanCode))
     } else None
+  }
+
+  def layerRdd(
+    sources: Array[RasterSource],
+    layout: LayoutDefinition,
+    resampleMethod: ResampleMethod = NearestNeighbor,
+    partitioner: Option[Partitioner] = None
+  )(implicit spark: SparkSession): TileLayerRDD[SpatialKey] = {
+    val keyExtractor = KeyExtractor.spatialKeyExtractor
+    val summary = RasterSummary.fromSeq(sources, keyExtractor.getMetadata)
+    val layerMetadata = summary.toTileLayerMetadata(layout, keyExtractor.getKey)
+    val partitionCount = summary.estimatePartitionsNumber
+    val part = partitioner.getOrElse(new HashPartitioner(partitionCount))
+
+    val sharedSources = spark.sparkContext.broadcast(
+      sources.map(_.tileToLayout(layout, sk => sk)))
+
+    val rasterRegionRDD: RDD[(SpatialKey, (SpatialKey, Int))] = spark.sparkContext
+      .parallelize( sources.indices, sources.length)
+      .flatMap { indx =>
+        sharedSources.value(indx).keys.map( key => key -> (key, indx))
+      }
+      .partitionBy(part)
+
+    val tiledRDD: RDD[(SpatialKey, Tile)] =
+      rasterRegionRDD
+        .groupByKey(part)
+        .mapValues { iter => {
+          for {
+            (key, index) <- iter.toSeq
+            tile <- sharedSources.value(index).read(key)
+          } yield tile.band(0)
+        }.reduce (_ merge _) }
+
+    ContextRDD(tiledRDD, layerMetadata)
   }
 
 
