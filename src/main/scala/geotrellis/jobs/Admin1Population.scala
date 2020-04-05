@@ -76,7 +76,7 @@ object Admin1Population extends CommandApp(
             .collect
             .toMap
             .map { case (adm, sum) =>
-              adm -> sum.map(_.value).toOption.getOrElse(Double.NaN)
+              adm -> sum.toOption.map(_.value).getOrElse(Double.NaN)
             }
 
         // Output
