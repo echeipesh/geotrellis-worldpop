@@ -84,18 +84,23 @@ object Admin1Population extends CommandApp(
 
         val conf = spark.sparkContext.hadoopConfiguration
         val fs = FileSystem.get(new URI(output), conf)
-        val pw = new PrintWriter(fs.create(new Path(output)))
+        val geojson = new PrintWriter(fs.create(new Path(output + ".geojson")))
+        val csv = new PrintWriter(fs.create(new Path(output + ".csv")))
         try {
           for ((adm, pop) <- result) {
             val f = features(adm.adm1_code)
             val area = Admin1Result.regionAreaKM(f.geom)
             val result = Admin1Result(adm.adm1_code, adm.adm0_a3, pop.toLong, area.toLong)
             val json = Feature(f.geom, result).toGeoJson
-            pw.println(json)
+            geojson.println(json)
+
+            val line = s"${adm.adm1_code},${adm.adm0_a3},${pop.toLong},${area.toLong}"
+            csv.println(line)
           }
         }
         finally {
-          pw.close()
+          geojson.close()
+          csv.close()
           fs.close()
         }
 
