@@ -5,6 +5,7 @@ import com.monovore.decline._
 import geotrellis.layer._
 import geotrellis.raster._
 import geotrellis.proj4.WebMercator
+import geotrellis.raster.render.ColorRamp
 import geotrellis.raster.resample.{Bilinear, NearestNeighbor}
 import geotrellis.spark.pyramid.Pyramid
 import geotrellis.spark.store.hadoop.SaveToHadoop
@@ -65,7 +66,7 @@ object RenderWorldPop extends CommandApp(
 
         pyramid.levels.foreach { case (zoom, tileRdd) =>
           val imageRdd: RDD[(SpatialKey, Array[Byte])] =
-            tileRdd.mapValues(_.toArrayTile.renderPng(WorldPopColorMap.globalOrange).bytes)
+            tileRdd.mapValues(_.toArrayTile.renderPng(WorldPopColorMap.blueColorMap).bytes)
 
           val keyToPath = { k: SpatialKey => s"${output}/${zoom}/${k.col}/${k.row}.png" }
           if (output.startsWith("s3")) {
@@ -109,19 +110,16 @@ object WorldPopColorMap {
     0x0d58a1,
     0x08306b)
 
-  val globalBreaks = Array(
-    1,
-    2,
-    5,
-    10,
-    20,
-    50,
-    100,
-    200,
-    1000
-  )
+  val globalBreaks = Array(1, 2, 5, 10, 20, 50, 100, 200, 1000)
+  val twofoldBreaks = Array(1,2,4,8,16,32,64,128,256,512,1025,2048)
 
-  def globalOrange = orange9.toColorMap(globalBreaks)
-  def globalBlue = blue9.toColorMap(globalBreaks)
+  val BlueRamp = ColorRamp(0xFFF7FBFF,0xECE7F2FF,0xD0D1E6FF,0xA6BDDBFF,0x74A9CFFF,0x3690C0FF,0x0570B0FF,0x034E7BFF)
+
+  def firstBreakTransparent(cr: ColorRamp, breaks: Array[Int]): ColorMap = {
+    ColorRamp(0 +: cr.stops(breaks.length - 1).colors).toColorMap(breaks)
+  }
+
   def globalBlueToRed = ColorRamps.BlueToRed.toColorMap(globalBreaks)
+
+  val blueColorMap = firstBreakTransparent(BlueRamp, globalBreaks)
 }
