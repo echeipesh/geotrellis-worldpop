@@ -71,37 +71,52 @@ object Admin1Population extends CommandApp(
         )
 
         val job = new Admin1Population(countriesInclude, regions, numPartitions.getOrElse(123))
-        val result: Map[Admin1Key, Double] =
+        val result: Map[Admin1Key, Option[PopulationSummary]] =
           job.result
             .collect
             .toMap
             .map { case (adm, sum) =>
-              adm -> sum.toOption.map(_.value).getOrElse(Double.NaN)
+              adm -> sum.toOption
             }
 
         // Output
         val features = NaturalEarth.parseAdmin1[Admin1Key].map(f => f.data.adm1_code -> f).toMap
 
+        val histPopulation = StreamingHistogram(256)
+        val histDensity = StreamingHistogram(256)
+
         val conf = spark.sparkContext.hadoopConfiguration
         val fs = FileSystem.get(new URI(output), conf)
         val geojson = new PrintWriter(fs.create(new Path(output + ".geojson")))
         val csv = new PrintWriter(fs.create(new Path(output + ".csv")))
-        csv.println("adm1_code,adm0_a3,population,area_km")
+        val dist = new PrintWriter(fs.create(new Path(output+ "_quantile.json")))
+        csv.println(Admin1Result.csvHeader)
         try {
-          for ((adm, pop) <- result) {
+          for ((adm, summary) <- result) {
             val f = features(adm.adm1_code)
-            val area = Admin1Result.regionAreaKM(f.geom)
-            val result = Admin1Result(adm.adm1_code, adm.adm0_a3, pop.toLong, area.toLong)
-            val json = Feature(f.geom, result).toGeoJson
-            geojson.println(json)
+            val result = Admin1Result.fromPopulationSummary(f, summary)
+            histPopulation.countItem(result.population, 1)
+            histDensity.countItem(result.density, 1)
 
-            val line = s"${adm.adm1_code},${adm.adm0_a3},${pop.toLong},${area.toLong}"
+            geojson.println(Feature(f.geom, result).toGeoJson)
+            val line = result.csvLine
+            println(line)
             csv.println(line)
           }
+
+          import _root_.io.circe.syntax._
+
+          dist.print(
+            Map(
+              "population" -> histPopulation.quantileBreaks(10),
+              "density" -> histDensity.quantileBreaks(10)
+            ).asJson.spaces2
+          )
         }
         finally {
           geojson.close()
           csv.close()
+          dist.close()
           fs.close()
         }
 
@@ -137,7 +152,7 @@ class Admin1Population(
     }.repartition(numPartitions)
 
 
-  val result: RDD[(Admin1Key, PolygonalSummaryResult[SumValue])] =
+  val result: RDD[(Admin1Key, PolygonalSummaryResult[PopulationSummary])] =
     regionRdd
       .flatMap { case (key, code) =>
         val source = WorldPop.rasterSource(code).get.resampleToGrid(jobGrid, NearestNeighbor)
@@ -150,7 +165,7 @@ class Admin1Population(
           feature <- regions.value.findIntersecting(key.extent(jobGrid))
         } yield {
           println(s"Summary: ${feature.data.adm1_code}")
-          feature.data -> raster.polygonalSummary(feature.geom, SumVisitor)
+          feature.data -> raster.polygonalSummary(feature.geom, new PopulationSummary.Visitor)
         }
       }
       .reduceByKey(_ combine _)
