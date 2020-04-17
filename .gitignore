@@ -13,3 +13,4 @@ metastore_db/
 .cluster_id
 .DS_Store
 .metals
+project/metals.sbt
