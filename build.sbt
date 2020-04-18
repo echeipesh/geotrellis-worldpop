@@ -113,5 +113,4 @@ import geotrellis.proj4._
 import geotrellis.vector._
 import geotrellis.raster._
 import geotrellis.layer._
-import geotrellis.sdg._
 """
