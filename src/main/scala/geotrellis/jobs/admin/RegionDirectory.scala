@@ -1,4 +1,4 @@
-package geotrellis.jobs
+package geotrellis.jobs.admin
 
 import geotrellis.vector._
 import geotrellis.layer._

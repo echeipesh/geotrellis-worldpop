@@ -1,4 +1,4 @@
-package geotrellis.jobs
+package geotrellis.jobs.admin
 
 import geotrellis.proj4.util.UTM
 import geotrellis.proj4.{LatLng, WebMercator}

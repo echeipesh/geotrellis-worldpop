@@ -1,4 +1,4 @@
-package geotrellis.jobs
+package geotrellis.jobs.admin
 
 import java.io.PrintWriter
 import java.net.URI
@@ -25,7 +25,7 @@ import org.apache.spark.sql._
 
 
 /** Total population per Admin1 boundary */
-object Admin1Population extends CommandApp(
+object Admin1PopulationApp extends CommandApp(
   name = "Admin1 Population",
   header = "Summarize population within each Admin1 boundary",
   main = {
@@ -70,7 +70,7 @@ object Admin1Population extends CommandApp(
           )
         )
 
-        val job = new Admin1Population(countriesInclude, regions, numPartitions.getOrElse(123))
+        val job = new Admin1PopulationApp(countriesInclude, regions, numPartitions.getOrElse(123))
         val result: Map[Admin1Key, Option[PopulationSummary]] =
           job.result
             .collect
@@ -127,7 +127,7 @@ object Admin1Population extends CommandApp(
   }
 )
 
-class Admin1Population(
+class Admin1PopulationApp(
   @transient val countryCodes: NonEmptyList[String],
   regions: Broadcast[RegionDirectory],
   @transient val numPartitions: Int

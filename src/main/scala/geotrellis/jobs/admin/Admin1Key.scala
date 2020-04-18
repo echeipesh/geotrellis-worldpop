@@ -1,4 +1,4 @@
-package geotrellis.jobs
+package geotrellis.jobs.admin
 
 import io.circe._
 import io.circe.generic.semiauto._

@@ -1,4 +1,4 @@
-package geotrellis.jobs
+package geotrellis.jobs.admin
 
 import cats.Monoid
 import geotrellis.raster.{Raster, Tile, isData}
@@ -6,7 +6,6 @@ import geotrellis.raster.histogram.StreamingHistogram
 import geotrellis.raster.summary.GridVisitor
 
 case class PopulationSummary(population: Double, distribution: StreamingHistogram)
-
 
 object PopulationSummary {
   implicit val populationSummaryMonoid: Monoid[PopulationSummary] = new Monoid[PopulationSummary] {
@@ -32,6 +31,4 @@ object PopulationSummary {
       hist.statistics()
     }
   }
-
 }
-
