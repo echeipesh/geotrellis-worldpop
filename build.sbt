@@ -1,30 +1,17 @@
 name := "geotrellis-worldpop"
 version := "2.1"
-scalaVersion := "2.11.12"
+scalaVersion := "2.12.11"
 organization := "geotrellis"
 
 libraryDependencies ++= Seq(
   "org.apache.spark" %% "spark-core" % Version.spark % Provided,
   "org.apache.spark" %% "spark-hive" % Version.spark % Provided,
-  "org.locationtech.geotrellis" %% "geotrellis-layer" % Version.geotrellis,
   "org.locationtech.geotrellis" %% "geotrellis-s3" % Version.geotrellis,
   "org.locationtech.geotrellis" %% "geotrellis-spark" % Version.geotrellis,
   "org.locationtech.geotrellis" %% "geotrellis-s3-spark" % Version.geotrellis,
-  "org.locationtech.geomesa" %% "geomesa-spark-jts" % "2.3.0",
   "org.log4s" %% "log4s" % "1.8.2",
-  "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.9.9",
-  "com.monovore" %% "decline" % "0.5.0",
+  "com.monovore" %% "decline" % "1.2.0",
   "org.scalatest" %% "scalatest" % "3.0.8" % Test
-)
-
-externalResolvers := Seq(
-  DefaultMavenRepository,
-  "OSGeo" at "http://download.osgeo.org/webdav/geotools/",
-  "eclipse-releases" at "https://repo.eclipse.org/content/repositories/releases/",
-  "eclipse-snapshots" at "https://repo.eclipse.org/content/repositories/snapshots/",
-  Resolver.file("local", file(Path.userHome.absolutePath + "/.ivy2/local"))(Resolver.ivyStylePatterns),
-  Resolver.bintrayRepo("azavea", "geotrellis"),
-  Resolver.bintrayRepo("azavea", "maven")
 )
 
 test in assembly := {}
@@ -69,7 +56,7 @@ sparkMasterType             := "m4.4xlarge"
 sparkCoreType               := "m4.4xlarge"
 sparkMasterPrice            := Some(1.00)
 sparkCorePrice              := Some(1.00)
-sparkEmrRelease             := "emr-5.29.0"
+sparkEmrRelease             := "emr-6.0.0"
 sparkAwsRegion              := "us-east-1"
 sparkSubnetId               := Some("subnet-4f553375")
 sparkS3JarFolder            := s"s3://geotrellis-test/jars/${Environment.user}"
