@@ -161,8 +161,8 @@ class Admin1PopulationApp(
 
         println(s"Key: ${key}")
         for {
+          feature <- regions.value.findIntersecting(key.extent(jobGrid)).toList
           raster <- region.raster.map(_.mapTile(_.band(0))).toList
-          feature <- regions.value.findIntersecting(key.extent(jobGrid))
         } yield {
           println(s"Summary: ${feature.data.adm1_code}")
           feature.data -> raster.polygonalSummary(feature.geom, new PopulationSummary.Visitor)

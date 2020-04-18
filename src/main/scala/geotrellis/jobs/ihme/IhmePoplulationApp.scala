@@ -145,8 +145,8 @@ class IhmePopulationApp(
 
         println(s"Key: ${key}")
         for {
+          feature <- regions.value.find(_.geom.intersects(bbox)).toList
           raster <- region.raster.map(_.mapTile(_.band(0))).toList
-          feature <- regions.value.find(_.geom.intersects(bbox))
         } yield {
           println(s"Summary: ${feature.data}")
           feature.data -> raster.polygonalSummary(feature.geom, new TileSumVisitor)
