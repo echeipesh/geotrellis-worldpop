@@ -14,6 +14,10 @@ libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "3.0.8" % Test
 )
 
+Test / fork := true
+Test / connectInput := true
+outputStrategy := Some(StdoutOutput)
+
 test in assembly := {}
 
 assemblyShadeRules in assembly := {
