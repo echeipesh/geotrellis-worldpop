@@ -145,7 +145,7 @@ class IhmePopulationApp(
 
         println(s"Key: ${key}")
         for {
-          feature <- regions.value.find(_.geom.intersects(bbox)).toList
+          feature <- regions.value.filter(_.geom.intersects(bbox)).toList
           raster <- region.raster.map(_.mapTile(_.band(0))).toList
         } yield {
           println(s"Summary: ${feature.data}")
